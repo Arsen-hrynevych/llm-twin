@@ -1,0 +1,43 @@
+services:
+  etl_mongo:
+    image: mongodb:latest
+    container_name: elt_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - clean_mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_USERNAME=${MONGO_INITDB_USERNAME}
+      - MONGO_INITDB_PASSWORD=${MONGO_INITDB_PASSWORD}
+    networks:
+      - etl_network
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.runCommand({ connectionStatus: 1 })"]
+      interval: 30s   
+      retries: 3 
+      start_period: 10s
+      timeout: 5s  
+
+  linkedin_crawler:
+    build: 
+      context: .
+      dockerfile: .docker/Dockerfile.crawlers
+    container_name: linkedin_crawler
+    depends_on:
+      - etl_mongo
+    environment:
+      - MONGO_URI=${MONGO_URI}
+    volumes:
+      - ./crawlers:/app
+    networks:
+      - etl_network
+
+networks:
+  etl_network:
+    driver: bridge
+
+volumes:
+  clean_mongo_data:
+    driver: local
+
